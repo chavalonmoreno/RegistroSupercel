@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/supercel.iml" filepath="$PROJECT_DIR$/.idea/modules/supercel.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/supercel_main.iml" filepath="$PROJECT_DIR$/.idea/modules/supercel_main.iml" group="supercel" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/supercel_test.iml" filepath="$PROJECT_DIR$/.idea/modules/supercel_test.iml" group="supercel" />
+    </modules>
+  </component>
+</project>
