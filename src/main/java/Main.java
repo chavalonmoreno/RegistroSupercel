@@ -2,10 +2,8 @@
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.squareup.okhttp.OkHttpClient;
-import com.squareup.okhttp.Request;
-import com.squareup.okhttp.RequestBody;
-import com.squareup.okhttp.Response;
+import com.squareup.okhttp.*;
+
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -13,13 +11,21 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Timer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
+
+import org.jdom2.input.SAXBuilder;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.jsoup.Jsoup;
+import org.w3c.dom.Document;
 
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
 
 
 /**
@@ -56,6 +62,7 @@ public class Main {
     public static void procesarArchivo () throws JSONException {
         Linea linea;
         Usuario usuarioLog;
+        Timer timer = new Timer();
         try {
             ArrayList<String> lineas = getLinesOfFile("C:\\users\\alexi\\Documents\\CSVSUPERCEL\\PAGOCHIPEXPRESS.csv");
             ArrayList<String> nombres = getLinesOfFile("C:\\users\\alexi\\Documents\\CSVSUPERCEL\\NOMBRES.txt");
@@ -67,7 +74,8 @@ public class Main {
             usuarioLog.setPass(password);
             usuarioLog.setTipo(tipo);
             postUsuario(usuarioLog);
-            /*for ( String renglon : lineas ){
+            getLogIn();
+            for ( String renglon : lineas ){
                 String[] contenido = renglon.split(",");
                 linea = new Linea();
                 linea.setTelefono(contenido[10]);
@@ -86,10 +94,21 @@ public class Main {
                 linea.setFecha_activacion(getFechaActivacionAleatoria());
                 linea.setUsuario(usuario);
                 System.out.println(linea.toString());
-
-            }*/
+                Thread.sleep(1000);
+            }
         } catch (IOException ex) {
             Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void getLogIn () {
+        byte [] bs = {};
+        try {
+            readJsonFromUrlGet(linkLogIN,bs,"");
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
@@ -155,7 +174,7 @@ public class Main {
         return mr.nextInt(3900) + 100 + "";
     }
 
-    public static JSONObject readJsonFromUrlGet(String tURL, byte[] token, String prefijo) throws IOException, JSONException, Exception {
+    public static void readJsonFromUrlGet(String tURL, byte[] token, String prefijo) throws IOException, JSONException, Exception {
         URL url;
 
         Integer codigo = null;
@@ -173,13 +192,20 @@ public class Main {
                     .build();
 
             response = client.newCall(requestApi).execute();
+            //responseBody = response.body().toString();
+            //System.out.println(responseBody);
 
             codigo = response.code();
-            try {
+            if ( codigo == 200 ) {
+                System.out.println("TODO BIEN GET");
+            } else {
+                System.out.println("TRONO GET");
+            }
+            /*try {
                 if (codigo > 199 && codigo < 300) {
                 } else if (codigo > 399 && codigo < 500) {
                     responseBody = response.body().string();
-                    String mensaje = new JSONObject(responseBody).get("message").toString();
+                    //String mensaje = new JSONObject(responseBody).get("message").toString();
                     System.out.println(responseBody);
                     System.out.println(mensaje);
                     throw new Exception(mensaje);
@@ -193,7 +219,7 @@ public class Main {
             if (!response.isSuccessful()) {
                 System.out.println(response.body().string());
                 throw new IOException("Unexpected code " + response.body().string());
-            }
+            }*/
 
         } catch (IOException ex) {
             System.out.println(ex.getMessage());
@@ -203,15 +229,13 @@ public class Main {
             System.out.println(ex.getMessage());
             throw new Exception(ex.getMessage());
         } finally {
-            if (connection != null) {
-                connection.disconnect();
-            }
+
         }
-        responseBody = response.body().string();
-        return new JSONObject(responseBody);
+        //responseBody = response.body().string();
+        //return new JSONObject(responseBody);
     }
 
-    public static JSONObject readJsonFromUrlPost(String tURL, RequestBody formBody, byte[] token, String prefijo) throws IOException, JSONException, Exception {
+    public static void readJsonFromUrlPost(String tURL, RequestBody formBody, byte[] token, String prefijo) throws IOException, JSONException, Exception {
         URL url;
         Integer codigo = null;
 
@@ -227,9 +251,13 @@ public class Main {
                     .build();
 
             response = client.newCall(requestApi).execute();
-
             codigo = response.code();
-            try {
+            if ( codigo == 200 ){
+                System.out.println("TODO BIEN POST");
+            } else {
+                System.out.println("TRONO POST");
+            }
+            /*try {
                 if (codigo > 199 && codigo < 300) {
                 } else if (codigo > 399 && codigo < 500) {
                     responseBody = response.body().string();
@@ -245,7 +273,7 @@ public class Main {
             if (!response.isSuccessful()) {
                 System.out.println(response.body().string());
                 throw new IOException("Unexpected code " + response.body().string());
-            }
+            }*/
 
         } catch (IOException ex) {
             System.out.println(ex.getMessage());
@@ -254,13 +282,9 @@ public class Main {
         } catch (JSONException ex) {
             System.out.println(ex.getMessage());
             throw new Exception(ex.getMessage());
-        } finally {
-            if (connection != null) {
-                connection.disconnect();
-            }
         }
-        responseBody = response.body().string();
-        return new JSONObject(responseBody);
+        //responseBody = response.body().string();
+        //return new JSONObject(responseBody);
     }
 }
 
