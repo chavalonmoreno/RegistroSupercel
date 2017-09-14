@@ -17,4 +17,6 @@ dependencies {
     compile group: 'org.w3c', name: 'dom', version: '2.3.0-jaxb-1.0.6'
     compile group: 'org.jsoup', name: 'jsoup', version: '1.8.3'
     compile group: 'org.jdom', name: 'jdom2', version: '2.0.6'
+    //compile group: 'com.squareup.okhttp3', name: 'okhttp', version: '3.9.0'
+
 }

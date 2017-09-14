@@ -1,31 +1,14 @@
-
-
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.squareup.okhttp.*;
-
-import java.io.BufferedReader;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.IOException;
-import java.net.HttpURLConnection;
-import java.net.URL;
+import java.io.*;
+import java.net.*;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Timer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.Random;
-import java.util.concurrent.TimeUnit;
-
+import com.squareup.okhttp.*;
+import com.squareup.okhttp.MediaType;
 import org.jdom2.input.SAXBuilder;
 import org.json.JSONException;
-import org.json.JSONObject;
-import org.jsoup.Jsoup;
-import org.w3c.dom.Document;
-
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
 
 
 /**
@@ -36,35 +19,45 @@ public class Main {
     private static final String usuario = "SUP00T1B0";
     private static final String password = "supercel";
     private static final String tipo = "DISTRIBUIDOR";
-    private static final String fechaActual = "09 de Septiembre del 2017";
+    private static final String fechaActual = "14%20de%20Septiembre%20del%202017";
     private static final Integer tamanoNombres = 100;
     private static final Integer tamanoDirecciones = 719;
     private static final Integer tamanoCalles = 201;
+    public static  String cookie = "";
+    private static final String mensaje = "Telcel Regi&oacute;n 2";
+    private static final String msjExitosoSava = "ha sido enviado con exito";
     private static final String linkUsuario = "https://region2.telcel.com/validamefv.asp";
     private static final String linkLogIN = "https://region2.telcel.com/contenido2.asp";
     private static final String linkNumero = "https://region2.telcel.com/distribuidor/regdol/regdol_checa_v2.asp?w=2";
     private static final String linkRegistro = "https://region2.telcel.com/distribuidor/regdol/regdol_procesa_v2.asp";
     private static final String linkLogOUT = "https://region2.telcel.com/default.asp";
     private static final String [] meses = {"Marzo","Abril","Mayo","Junio","Julio"};
+    private static final String rutaCorrectos = "C:\\users\\alexi\\Documents\\CSVSUPERCEL\\Registrados.txt";
+    private static final String rutaIncorrectos = "C:\\users\\alexi\\Documents\\CSVSUPERCEL\\Tronados.txt";
     static HttpURLConnection connection = null;
     static Response response = null;
     static Request requestApi = null;
     static String responseBody = null;
+
     public static OkHttpClient client = new OkHttpClient();
     public static String targetUrl = "";
     static Random mr = new Random();
 
+
     public static void main(String[] args) throws IOException, JSONException {
         procesarArchivo();
+        //getLogOut();
 
+        System.exit(0);
     }
 
     public static void procesarArchivo () throws JSONException {
         Linea linea;
         Usuario usuarioLog;
-        Timer timer = new Timer();
+        int c = 0;
         try {
             ArrayList<String> lineas = getLinesOfFile("C:\\users\\alexi\\Documents\\CSVSUPERCEL\\PAGOCHIPEXPRESS.csv");
+            ArrayList<String> lineasRegistradas = getLinesOfFile("C:\\users\\alexi\\Documents\\CSVSUPERCEL\\Registrados.txt");
             ArrayList<String> nombres = getLinesOfFile("C:\\users\\alexi\\Documents\\CSVSUPERCEL\\NOMBRES.txt");
             ArrayList<String> apellidos = getLinesOfFile("C:\\users\\alexi\\Documents\\CSVSUPERCEL\\APELLIDOS.txt");
             ArrayList<String> direcciones = getLinesOfFile("C:\\users\\alexi\\Documents\\CSVSUPERCEL\\COLONIASCPCLN.txt");
@@ -74,39 +67,90 @@ public class Main {
             usuarioLog.setPass(password);
             usuarioLog.setTipo(tipo);
             postUsuario(usuarioLog);
-            getLogIn();
-            for ( String renglon : lineas ){
+            //getLogIn();
+            /*for ( String renglon : lineas ){
                 String[] contenido = renglon.split(",");
-                linea = new Linea();
-                linea.setTelefono(contenido[10]);
-                Direccion direccion = getDireccion(direcciones.get(mr.nextInt(tamanoDirecciones)));
-                linea.setNombre(nombres.get(mr.nextInt(tamanoNombres)));
-                linea.setAp_paterno(apellidos.get(mr.nextInt(tamanoNombres)));
-                linea.setAp_materno(apellidos.get(mr.nextInt(tamanoNombres)));
-                linea.setColonia(direccion.getColonia());
-                linea.setCp(direccion.getCp());
-                linea.setNumero(getNumeroCasaAleatorio());
-                linea.setTel_casa(getNumeroTelefonicoAleatorio());
-                linea.setCalle(calles.get(mr.nextInt(tamanoCalles)));
-                linea.setEstado("SIN");
-                linea.setCiudad("CULIACAN");
-                linea.setFecha(fechaActual);
-                linea.setFecha_activacion(getFechaActivacionAleatoria());
-                linea.setUsuario(usuario);
-                System.out.println(linea.toString());
-                Thread.sleep(1000);
-            }
+                String telefono = contenido[10];
+                if (!yaFueRegistrado(telefono,lineasRegistradas)) {
+                    linea = new Linea();
+                    linea.setTelefono(telefono);
+                    Direccion direccion = getDireccion(direcciones.get(mr.nextInt(tamanoDirecciones)));
+                    linea.setNombre((nombres.get(mr.nextInt(tamanoNombres))).replaceAll(" ", "%20"));
+                    linea.setAp_paterno(apellidos.get(mr.nextInt(tamanoNombres)));
+                    linea.setAp_materno(apellidos.get(mr.nextInt(tamanoNombres)));
+                    linea.setColonia(direccion.getColonia().replaceAll(" ", "%20"));
+                    linea.setCp(direccion.getCp());
+                    linea.setNumero(getNumeroCasaAleatorio());
+                    linea.setTel_casa(getNumeroTelefonicoAleatorio());
+                    linea.setCalle(calles.get(mr.nextInt(tamanoCalles)).replaceAll(" ", "%20"));
+                    linea.setEstado("SIN");
+                    linea.setCiudad("CULIACAN");
+                    linea.setFecha(fechaActual);
+                    linea.setFecha_activacion(getFechaActivacionAleatoria());
+                    linea.setUsuario(usuario);
+                    Thread.sleep(2000);
+                    String resultado = postSave(linea);
+                    if ( resultado.equals("BIEN")) {
+                        escribirLineaRegistrada(linea,rutaCorrectos);
+                    } else {
+                        escribirLineaRegistrada(linea,rutaIncorrectos);
+                    }
+
+                    System.out.println("Total : "+c++);
+                }
+            }*/
+           getLogOut();
         } catch (IOException ex) {
             Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (InterruptedException e) {
+        }/* catch (InterruptedException e) {
+            e.printStackTrace();
+        } */catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    public static void getLogIn () {
-        byte [] bs = {};
+    public static boolean yaFueRegistrado ( String numero , ArrayList <String> lineasRegistradas ) {
+        for ( String l : lineasRegistradas) {
+            String[] contenido = l.split("|");
+            if ( contenido[0] == numero ) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static void escribirLineaRegistrada ( Linea linea, String ruta ) throws IOException{
         try {
-            readJsonFromUrlGet(linkLogIN,bs,"");
+            File file = new File(ruta);
+            if (!file.exists()) {
+                file.createNewFile();
+            }
+            String content = linea.getTelefono() + "|" + linea.getNombre().replaceAll("%20"," ") +
+                    "|" + linea.getAp_paterno() + "|" +
+                    linea.getAp_materno() + "|" + linea.getCalle().replaceAll("%20"," ")  + "|" +
+                    linea.getNumero() + "|" + linea.getColonia().replaceAll("%20"," ")
+                    + "|" + linea.getCp() + "|" + linea.getTel_casa();
+            FileWriter fw = new FileWriter(file.getAbsoluteFile(),true);
+            BufferedWriter bw = new BufferedWriter(fw);
+            bw.write(content);
+            bw.newLine();
+            bw.close();
+        } catch ( IOException ioe) {
+
+        }
+    }
+
+    public static void getLogIn () {
+        try {
+            readJsonFromUrlGet(linkLogIN);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void getLogOut () {
+        try {
+            readJsonFromUrlGet(linkLogOUT);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -114,15 +158,15 @@ public class Main {
 
     public static void postUsuario (Usuario usuarioLog) throws JSONException {
         try {
-            byte[] token = {};
-            Gson gson = new GsonBuilder().setDateFormat("yyyy-MM-dd").create();
-            com.squareup.okhttp.MediaType mediaType = com.squareup.okhttp.MediaType.parse("application/json; charset=utf-8");
-            String json = gson.toJson(usuarioLog);
-            RequestBody jsonLog = RequestBody.create(mediaType, json);
-            readJsonFromUrlPost(linkUsuario, jsonLog, token, "");
+            readJsonFromUrlPostLogIn(linkUsuario);
         } catch (Exception ex) {
             Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
         }
+    }
+
+    public static String postSave (Linea linea) throws Exception {
+        return readJsonFromUrlPost(linkRegistro,linea);
+
     }
 
     public static ArrayList<String> getLinesOfFile ( String archivo ) throws IOException{
@@ -148,7 +192,7 @@ public class Main {
         } else {
             dia += diaNumero;
         }
-        return dia + " de " + mes + " del 2017";
+        return (dia + " de " + mes + " del 2017").replaceAll(" ","%20");
     }
 
     public static Direccion getDireccion (String linea ){
@@ -174,107 +218,140 @@ public class Main {
         return mr.nextInt(3900) + 100 + "";
     }
 
-    public static void readJsonFromUrlGet(String tURL, byte[] token, String prefijo) throws IOException, JSONException, Exception {
-        URL url;
-
+    public static void readJsonFromUrlGetLogOut(String tURL) throws Exception {
         Integer codigo = null;
-
-
-        client.setWriteTimeout(10, TimeUnit.SECONDS);
         try {
-            String tokenStr = new String(token);
-
             requestApi = new Request.Builder()
-                    .addHeader("Authorization", prefijo + " " + tokenStr)
-                    .addHeader("Accept", "*/*")
-                    .url(targetUrl + tURL)
+                    .url(tURL)
                     .get()
+                    .addHeader("cache-control", "no-cache")
                     .build();
 
-            response = client.newCall(requestApi).execute();
-            //responseBody = response.body().toString();
-            //System.out.println(responseBody);
-
+            Response response = client.newCall(requestApi).execute();
+            responseBody = response.body().string();
             codigo = response.code();
             if ( codigo == 200 ) {
                 System.out.println("TODO BIEN GET");
             } else {
                 System.out.println("TRONO GET");
             }
-            /*try {
-                if (codigo > 199 && codigo < 300) {
-                } else if (codigo > 399 && codigo < 500) {
-                    responseBody = response.body().string();
-                    //String mensaje = new JSONObject(responseBody).get("message").toString();
-                    System.out.println(responseBody);
-                    System.out.println(mensaje);
-                    throw new Exception(mensaje);
-                } else if (codigo > 499 && codigo < 600) {
-                    throw new Exception("Ocurrio un error en la api. Comuniquese con el administrador del sistema.");
-                }
-            } catch (Exception e) {
-                throw new Exception(e.getMessage());
-            }
-
-            if (!response.isSuccessful()) {
-                System.out.println(response.body().string());
-                throw new IOException("Unexpected code " + response.body().string());
-            }*/
-
         } catch (IOException ex) {
+            System.out.println(ex.getMessage());
+            System.out.println(ex);
+            throw new Exception(ex.getMessage());
+        }
+
+    }
+
+    public static void readJsonFromUrlGet(String tURL) throws Exception {
+        Integer codigo = null;
+
+
+        try {
+            requestApi = new Request.Builder()
+                    .url(tURL)
+                    .get()
+                    .addHeader("cache-control", "no-cache")
+                    .build();
+
+            Response response = client.newCall(requestApi).execute();
+            responseBody = response.body().string();
+            codigo = response.code();
+            if ( codigo == 200 && responseBody.contains(mensaje)) {
+                System.out.println("TODO BIEN GET");
+            } else {
+                System.out.println("TRONO GET");
+            }
+            } catch (IOException ex) {
+            System.out.println(ex.getMessage());
+            System.out.println(ex);
+            throw new Exception(ex.getMessage());
+        }
+
+    }
+
+    public static String readJsonFromUrlPost(String tURL, Linea linea) throws IOException, JSONException, Exception {
+        URL url;
+        Integer codigo = null;
+        SAXBuilder builder = new SAXBuilder();
+        String resultado = "";
+        try {
+
+
+            MediaType mediaType = MediaType.parse("application/x-www-form-urlencoded");
+            RequestBody body = RequestBody.create(mediaType, "existe=1&telefono="+linea.getTelefono()+"&plataforma=GSM" +
+                    "&plan=CEL&modalidad=CPP&distribuidor=SUP&fecha_activacion="+ linea.getFecha_activacion() +
+                    "&titulo=" +
+                    "&nombre="+linea.getNombre() +
+                    "&ap_paterno="+linea.getAp_paterno() +
+                    "&ap_materno="+linea.getAp_materno() +
+                    "&calle="+ linea.getCalle() +
+                    "&numero="+ linea.getNumero() +
+                    "&colonia=" + linea.getColonia() +
+                    "&cp="+ linea.getCp() +
+                    "&ciudad="+ linea.getCiudad() +
+                    "&estado=" +linea.getEstado() +
+                    "&ocupacion=" +
+                    "&rfc=" +
+                    "&tel_casa=" + linea.getTel_casa() +
+                    "&tel_oficina=" +
+                    "&edad=" +
+                    "&email=telcel%40telcel.com" +
+                    "&usuario=SUP00T1B0" +
+                    "&fecha="+fechaActual);
+            requestApi = new Request.Builder()
+                    .url("https://region2.telcel.com/distribuidor/regdol/regdol_procesa_v2.asp")
+                    .post(body)
+                    .addHeader("content-type", "application/x-www-form-urlencoded")
+                    .addHeader("cache-control", "no-cache")
+                    .build();
+            response = client.newCall(requestApi).execute();
+            codigo = response.code();
+            responseBody = response.body().string();
+
+            if ( codigo == 200 && responseBody.contains(msjExitosoSava)){
+                System.out.println("TODO BIEN POST");
+                resultado = "BIEN";
+            } else {
+                System.out.println("TRONO POST");
+                resultado = "TRONO";
+            }
+         } catch (IOException ex) {
             System.out.println(ex.getMessage());
             System.out.println(ex);
             throw new Exception(ex.getMessage());
         } catch (JSONException ex) {
             System.out.println(ex.getMessage());
             throw new Exception(ex.getMessage());
-        } finally {
-
         }
-        //responseBody = response.body().string();
-        //return new JSONObject(responseBody);
+        return resultado;
     }
 
-    public static void readJsonFromUrlPost(String tURL, RequestBody formBody, byte[] token, String prefijo) throws IOException, JSONException, Exception {
+
+    public static void readJsonFromUrlPostLogIn(String tURL) throws IOException,  Exception {
         URL url;
         Integer codigo = null;
+        SAXBuilder builder = new SAXBuilder();
 
-        client.setWriteTimeout(10, TimeUnit.SECONDS);
         try {
-            String tokenStr = new String(token);
-
+            MediaType mediaType = MediaType.parse("application/x-www-form-urlencoded");
+            RequestBody body = RequestBody.create(mediaType, "tipo=DISTRIBUIDOR&user=SUP00T1B0&pass=supercel");
             requestApi = new Request.Builder()
-                    .addHeader("Authorization", prefijo + " " + tokenStr)
-                    .addHeader("Accept", "*/*")
                     .url(tURL)
-                    .post(formBody)
+                    .post(body)
+                    .addHeader("content-type", "application/x-www-form-urlencoded")
+                    .addHeader("cache-control", "no-cache")
                     .build();
 
             response = client.newCall(requestApi).execute();
+            responseBody = response.body().string();
             codigo = response.code();
-            if ( codigo == 200 ){
+            System.out.println(responseBody);
+            if ( codigo == 200 && responseBody.contains(mensaje)){
                 System.out.println("TODO BIEN POST");
             } else {
                 System.out.println("TRONO POST");
             }
-            /*try {
-                if (codigo > 199 && codigo < 300) {
-                } else if (codigo > 399 && codigo < 500) {
-                    responseBody = response.body().string();
-                    String mensaje = new JSONObject(responseBody).get("message").toString();
-                    throw new Exception(mensaje);
-                } else if (codigo > 499 && codigo < 600) {
-                    throw new Exception("Ocurrio un error en la api. Comuniquese con el administrador del sistema.");
-                }
-            } catch (Exception e) {
-                throw new Exception(e.getMessage());
-            }
-
-            if (!response.isSuccessful()) {
-                System.out.println(response.body().string());
-                throw new IOException("Unexpected code " + response.body().string());
-            }*/
-
         } catch (IOException ex) {
             System.out.println(ex.getMessage());
             System.out.println(ex);
@@ -283,8 +360,6 @@ public class Main {
             System.out.println(ex.getMessage());
             throw new Exception(ex.getMessage());
         }
-        //responseBody = response.body().string();
-        //return new JSONObject(responseBody);
     }
 }
 
@@ -544,9 +619,18 @@ class Linea {
 }
 
 class Usuario {
+
+    private String tipo;
     private String user;
     private String pass;
-    private String tipo;
+
+    public String getTipo() {
+        return tipo;
+    }
+
+    public void setTipo(String tipo) {
+        this.tipo = tipo;
+    }
 
     public String getUser() {
         return user;
@@ -564,11 +648,5 @@ class Usuario {
         this.pass = pass;
     }
 
-    public String getTipo() {
-        return tipo;
-    }
 
-    public void setTipo(String tipo) {
-        this.tipo = tipo;
-    }
 }
