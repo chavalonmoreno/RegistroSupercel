@@ -5,6 +5,9 @@ import java.util.Timer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.Random;
+
+import com.mashape.unirest.http.HttpResponse;
+import com.mashape.unirest.http.Unirest;
 import com.squareup.okhttp.*;
 import com.squareup.okhttp.MediaType;
 import org.jdom2.input.SAXBuilder;
@@ -19,7 +22,7 @@ public class Main {
     private static final String usuario = "SUP00T1B0";
     private static final String password = "supercel";
     private static final String tipo = "DISTRIBUIDOR";
-    private static final String fechaActual = "14%20de%20Septiembre%20del%202017";
+    private static final String fechaActual = "23%20de%20Octubre%20del%202017";
     private static final Integer tamanoNombres = 100;
     private static final Integer tamanoDirecciones = 719;
     private static final Integer tamanoCalles = 201;
@@ -111,7 +114,7 @@ public class Main {
 
     public static boolean yaFueRegistrado ( String numero , ArrayList <String> lineasRegistradas ) {
         for ( String l : lineasRegistradas) {
-            String[] contenido = l.split("|");
+            String[] contenido = l.split("\\|");
             if ( contenido[0] == numero ) {
                 return true;
             }
@@ -142,7 +145,7 @@ public class Main {
 
     public static void getLogIn () {
         try {
-            readJsonFromUrlGet(linkLogIN);
+            readJsonFromUrlGetLogIn(linkLogIN);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -150,7 +153,7 @@ public class Main {
 
     public static void getLogOut () {
         try {
-            readJsonFromUrlGet(linkLogOUT);
+            readJsonFromUrlGetLogOut(linkLogOUT);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -218,24 +221,20 @@ public class Main {
         return mr.nextInt(3900) + 100 + "";
     }
 
-    public static void readJsonFromUrlGetLogOut(String tURL) throws Exception {
+    public static void readJsonFromUrlPostLogIn(String tURL) throws Exception {
         Integer codigo = null;
         try {
-            requestApi = new Request.Builder()
-                    .url(tURL)
-                    .get()
-                    .addHeader("cache-control", "no-cache")
-                    .build();
-
-            Response response = client.newCall(requestApi).execute();
-            responseBody = response.body().string();
-            codigo = response.code();
+            HttpResponse<String> response = Unirest.post("https://region2.telcel.com/validamefv.asp")
+                    .header("content-type", "application/x-www-form-urlencoded")
+                    .header("cache-control", "no-cache")
+                    .body("tipo="+tipo+"&user="+usuario+"&pass="+password)
+                    .asString();
             if ( codigo == 200 ) {
                 System.out.println("TODO BIEN GET");
             } else {
                 System.out.println("TRONO GET");
             }
-        } catch (IOException ex) {
+        } catch (Exception ex) {
             System.out.println(ex.getMessage());
             System.out.println(ex);
             throw new Exception(ex.getMessage());
@@ -243,26 +242,20 @@ public class Main {
 
     }
 
-    public static void readJsonFromUrlGet(String tURL) throws Exception {
+    public static void readJsonFromUrlGetLogIn(String tURL) throws Exception {
         Integer codigo = null;
 
 
         try {
-            requestApi = new Request.Builder()
-                    .url(tURL)
-                    .get()
-                    .addHeader("cache-control", "no-cache")
-                    .build();
-
-            Response response = client.newCall(requestApi).execute();
-            responseBody = response.body().string();
-            codigo = response.code();
+            HttpResponse<String> response = Unirest.get("https://region2.telcel.com/contenido2.asp")
+                    .header("cache-control", "no-cache")
+                    .asString();
             if ( codigo == 200 && responseBody.contains(mensaje)) {
                 System.out.println("TODO BIEN GET");
             } else {
                 System.out.println("TRONO GET");
             }
-            } catch (IOException ex) {
+            } catch (Exception ex) {
             System.out.println(ex.getMessage());
             System.out.println(ex);
             throw new Exception(ex.getMessage());
@@ -277,37 +270,35 @@ public class Main {
         String resultado = "";
         try {
 
-
-            MediaType mediaType = MediaType.parse("application/x-www-form-urlencoded");
-            RequestBody body = RequestBody.create(mediaType, "existe=1&telefono="+linea.getTelefono()+"&plataforma=GSM" +
-                    "&plan=CEL&modalidad=CPP&distribuidor=SUP&fecha_activacion="+ linea.getFecha_activacion() +
-                    "&titulo=" +
-                    "&nombre="+linea.getNombre() +
-                    "&ap_paterno="+linea.getAp_paterno() +
-                    "&ap_materno="+linea.getAp_materno() +
-                    "&calle="+ linea.getCalle() +
-                    "&numero="+ linea.getNumero() +
-                    "&colonia=" + linea.getColonia() +
-                    "&cp="+ linea.getCp() +
-                    "&ciudad="+ linea.getCiudad() +
-                    "&estado=" +linea.getEstado() +
-                    "&ocupacion=" +
-                    "&rfc=" +
-                    "&tel_casa=" + linea.getTel_casa() +
-                    "&tel_oficina=" +
-                    "&edad=" +
-                    "&email=telcel%40telcel.com" +
-                    "&usuario=SUP00T1B0" +
-                    "&fecha="+fechaActual);
-            requestApi = new Request.Builder()
-                    .url("https://region2.telcel.com/distribuidor/regdol/regdol_procesa_v2.asp")
-                    .post(body)
-                    .addHeader("content-type", "application/x-www-form-urlencoded")
-                    .addHeader("cache-control", "no-cache")
-                    .build();
-            response = client.newCall(requestApi).execute();
-            codigo = response.code();
-            responseBody = response.body().string();
+            HttpResponse<String> response = Unirest.post("https://region2.telcel.com/distribuidor/regdol/regdol_procesa_v2.asp")
+                    .header("content-type", "application/x-www-form-urlencoded")
+                    .header("cache-control", "no-cache")
+                    .body("existe=1&" +
+                            "telefono=6672221700&" +
+                            "plataforma=GSM&" +
+                            "plan=CEL&" +
+                            "modalidad=CPP&" +
+                            "distribuidor=SUP&" +
+                            "fecha_activacion=23%20de%20Julio%20del%202017&" +
+                            "titulo=&" +
+                            "nombre=juan%20jose&" +
+                            "ap_paterno=mora&" +
+                            "ap_materno=leon&" +
+                            "calle=domingo%20rubi&" +
+                            "numero=162&" +
+                            "colonia=centro&" +
+                            "cp=80000&" +
+                            "ciudad=culiacan&" +
+                            "estado=SIN&" +
+                            "ocupacion=&" +
+                            "rfc=&" +
+                            "tel_casa=6677509076&" +
+                            "tel_oficina=&" +
+                            "edad=&" +
+                            "email=telcel%40telcel.com&" +
+                            "usuario=SUP00D2A2&" +
+                            "fecha=21%20de%20Septiembre%20del%202017")
+                    .asString();
 
             if ( codigo == 200 && responseBody.contains(msjExitosoSava)){
                 System.out.println("TODO BIEN POST");
@@ -316,48 +307,33 @@ public class Main {
                 System.out.println("TRONO POST");
                 resultado = "TRONO";
             }
-         } catch (IOException ex) {
+         } catch (Exception ex) {
             System.out.println(ex.getMessage());
             System.out.println(ex);
-            throw new Exception(ex.getMessage());
-        } catch (JSONException ex) {
-            System.out.println(ex.getMessage());
             throw new Exception(ex.getMessage());
         }
         return resultado;
     }
 
 
-    public static void readJsonFromUrlPostLogIn(String tURL) throws IOException,  Exception {
+    public static void readJsonFromUrlGetLogOut(String tURL) throws IOException,  Exception {
         URL url;
         Integer codigo = null;
         SAXBuilder builder = new SAXBuilder();
 
         try {
-            MediaType mediaType = MediaType.parse("application/x-www-form-urlencoded");
-            RequestBody body = RequestBody.create(mediaType, "tipo=DISTRIBUIDOR&user=SUP00T1B0&pass=supercel");
-            requestApi = new Request.Builder()
-                    .url(tURL)
-                    .post(body)
-                    .addHeader("content-type", "application/x-www-form-urlencoded")
-                    .addHeader("cache-control", "no-cache")
-                    .build();
-
-            response = client.newCall(requestApi).execute();
-            responseBody = response.body().string();
-            codigo = response.code();
+            HttpResponse<String> response = Unirest.get("https://region2.telcel.com/default.asp")
+                    .header("cache-control", "no-cache")
+                    .asString();
             System.out.println(responseBody);
             if ( codigo == 200 && responseBody.contains(mensaje)){
                 System.out.println("TODO BIEN POST");
             } else {
                 System.out.println("TRONO POST");
             }
-        } catch (IOException ex) {
+        } catch (Exception ex) {
             System.out.println(ex.getMessage());
             System.out.println(ex);
-            throw new Exception(ex.getMessage());
-        } catch (JSONException ex) {
-            System.out.println(ex.getMessage());
             throw new Exception(ex.getMessage());
         }
     }
