@@ -10,6 +10,8 @@ import com.mashape.unirest.http.HttpResponse;
 import com.mashape.unirest.http.Unirest;
 import com.squareup.okhttp.*;
 import com.squareup.okhttp.MediaType;
+import org.jdom2.Document;
+import org.jdom2.Element;
 import org.jdom2.input.SAXBuilder;
 import org.json.JSONException;
 
@@ -19,10 +21,10 @@ import org.json.JSONException;
  * @author alexisMoreno
  */
 public class Main {
-    private static final String usuario = "SUP00T1B0";
-    private static final String password = "supercel";
+    private static final String usuario = "CEt00d1b0";
+    private static final String password = "centel01";
     private static final String tipo = "DISTRIBUIDOR";
-    private static final String fechaActual = "23%20de%20Octubre%20del%202017";
+    private static final String fechaActual = "24%20de%20Octubre%20del%202017";
     private static final Integer tamanoNombres = 100;
     private static final Integer tamanoDirecciones = 719;
     private static final Integer tamanoCalles = 201;
@@ -34,46 +36,42 @@ public class Main {
     private static final String linkNumero = "https://region2.telcel.com/distribuidor/regdol/regdol_checa_v2.asp?w=2";
     private static final String linkRegistro = "https://region2.telcel.com/distribuidor/regdol/regdol_procesa_v2.asp";
     private static final String linkLogOUT = "https://region2.telcel.com/default.asp";
-    private static final String [] meses = {"Marzo","Abril","Mayo","Junio","Julio"};
-    private static final String rutaCorrectos = "C:\\users\\alexi\\Documents\\CSVSUPERCEL\\Registrados.txt";
-    private static final String rutaIncorrectos = "C:\\users\\alexi\\Documents\\CSVSUPERCEL\\Tronados.txt";
+    private static final String [] meses = {"Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre"};
+    private static final String rutaCorrectos = "archivos/registradosbien.txt";
+    private static final String rutaIncorrectos = "archivos/tronados.txt";
     static HttpURLConnection connection = null;
-    static Response response = null;
-    static Request requestApi = null;
     static String responseBody = null;
-
-    public static OkHttpClient client = new OkHttpClient();
     public static String targetUrl = "";
     static Random mr = new Random();
 
 
-    public static void main(String[] args) throws IOException, JSONException {
+    public static void main(String[] args) throws IOException {
         procesarArchivo();
         //getLogOut();
 
         System.exit(0);
     }
 
-    public static void procesarArchivo () throws JSONException {
+    public static void procesarArchivo (){
         Linea linea;
         Usuario usuarioLog;
         int c = 0;
         try {
-            ArrayList<String> lineas = getLinesOfFile("C:\\users\\alexi\\Documents\\CSVSUPERCEL\\PAGOCHIPEXPRESS.csv");
-            ArrayList<String> lineasRegistradas = getLinesOfFile("C:\\users\\alexi\\Documents\\CSVSUPERCEL\\Registrados.txt");
-            ArrayList<String> nombres = getLinesOfFile("C:\\users\\alexi\\Documents\\CSVSUPERCEL\\NOMBRES.txt");
-            ArrayList<String> apellidos = getLinesOfFile("C:\\users\\alexi\\Documents\\CSVSUPERCEL\\APELLIDOS.txt");
-            ArrayList<String> direcciones = getLinesOfFile("C:\\users\\alexi\\Documents\\CSVSUPERCEL\\COLONIASCPCLN.txt");
-            ArrayList<String> calles = getLinesOfFile("C:\\users\\alexi\\Documents\\CSVSUPERCEL\\CALLES.txt");
+            ArrayList<String> lineas = getLinesOfFile("archivos/tronados.txt");
+            ArrayList<String> lineasRegistradas = getLinesOfFile("archivos/registradosbien.txt");
+            ArrayList<String> nombres = getLinesOfFile("archivos/NOMBRES.txt");
+            ArrayList<String> apellidos = getLinesOfFile("archivos/APELLIDOS.txt");
+            ArrayList<String> direcciones = getLinesOfFile("archivos/COLONIASCPCLN.txt");
+            ArrayList<String> calles = getLinesOfFile("archivos/CALLES.txt");
             usuarioLog = new Usuario();
             usuarioLog.setUser(usuario);
             usuarioLog.setPass(password);
             usuarioLog.setTipo(tipo);
             postUsuario(usuarioLog);
-            //getLogIn();
-            /*for ( String renglon : lineas ){
-                String[] contenido = renglon.split(",");
-                String telefono = contenido[10];
+            getLogIn();
+           /*for ( String renglon : lineas ){
+                String[] contenido = renglon.split("\\|");
+                String telefono = contenido[0];
                 if (!yaFueRegistrado(telefono,lineasRegistradas)) {
                     linea = new Linea();
                     linea.setTelefono(telefono);
@@ -98,6 +96,7 @@ public class Main {
                     } else {
                         escribirLineaRegistrada(linea,rutaIncorrectos);
                     }
+                    System.out.println(linea.toString());
 
                     System.out.println("Total : "+c++);
                 }
@@ -115,7 +114,7 @@ public class Main {
     public static boolean yaFueRegistrado ( String numero , ArrayList <String> lineasRegistradas ) {
         for ( String l : lineasRegistradas) {
             String[] contenido = l.split("\\|");
-            if ( contenido[0] == numero ) {
+            if ( contenido[0] .equals(numero)  ) {
                 return true;
             }
         }
@@ -159,7 +158,7 @@ public class Main {
         }
     }
 
-    public static void postUsuario (Usuario usuarioLog) throws JSONException {
+    public static void postUsuario (Usuario usuarioLog) throws Exception {
         try {
             readJsonFromUrlPostLogIn(linkUsuario);
         } catch (Exception ex) {
@@ -229,6 +228,8 @@ public class Main {
                     .header("cache-control", "no-cache")
                     .body("tipo="+tipo+"&user="+usuario+"&pass="+password)
                     .asString();
+            codigo = response.getStatus();
+            System.out.println(codigo);
             if ( codigo == 200 ) {
                 System.out.println("TODO BIEN GET");
             } else {
@@ -244,12 +245,19 @@ public class Main {
 
     public static void readJsonFromUrlGetLogIn(String tURL) throws Exception {
         Integer codigo = null;
-
+        SAXBuilder builder = new SAXBuilder();
 
         try {
             HttpResponse<String> response = Unirest.get("https://region2.telcel.com/contenido2.asp")
                     .header("cache-control", "no-cache")
                     .asString();
+            codigo = response.getStatus();
+            responseBody = response.getBody();
+            Document document = (Document) builder.build(responseBody);
+            Element raiz = document.getRootElement();
+            System.out.println(raiz.getText());
+            System.out.println(codigo);
+
             if ( codigo == 200 && responseBody.contains(mensaje)) {
                 System.out.println("TODO BIEN GET");
             } else {
@@ -273,32 +281,35 @@ public class Main {
             HttpResponse<String> response = Unirest.post("https://region2.telcel.com/distribuidor/regdol/regdol_procesa_v2.asp")
                     .header("content-type", "application/x-www-form-urlencoded")
                     .header("cache-control", "no-cache")
-                    .body("existe=1&" +
-                            "telefono=6672221700&" +
-                            "plataforma=GSM&" +
-                            "plan=CEL&" +
-                            "modalidad=CPP&" +
-                            "distribuidor=SUP&" +
-                            "fecha_activacion=23%20de%20Julio%20del%202017&" +
-                            "titulo=&" +
-                            "nombre=juan%20jose&" +
-                            "ap_paterno=mora&" +
-                            "ap_materno=leon&" +
-                            "calle=domingo%20rubi&" +
-                            "numero=162&" +
-                            "colonia=centro&" +
-                            "cp=80000&" +
-                            "ciudad=culiacan&" +
-                            "estado=SIN&" +
-                            "ocupacion=&" +
-                            "rfc=&" +
-                            "tel_casa=6677509076&" +
-                            "tel_oficina=&" +
-                            "edad=&" +
-                            "email=telcel%40telcel.com&" +
-                            "usuario=SUP00D2A2&" +
-                            "fecha=21%20de%20Septiembre%20del%202017")
+                    .body("existe=1" +
+                            "&telefono="+linea.getTelefono() +
+                            "&plataforma=GSM" +
+                            "&plan=CEL" +
+                            "&modalidad=CPP" +
+                            "&distribuidor=SUP" +
+                            "&fecha_activacion="+linea.getFecha_activacion() +
+                            "&titulo=" +
+                            "&nombre="+linea.getNombre() +
+                            "&ap_paterno="+linea.getAp_paterno() +
+                            "&ap_materno="+linea.getAp_materno() +
+                            "&calle="+linea.getCalle() +
+                            "&numero="+linea.getNumero() +
+                            "&colonia="+linea.getColonia() +
+                            "&cp="+linea.getCp() +
+                            "&ciudad=culiacan" +
+                            "&estado=SIN" +
+                            "&ocupacion=" +
+                            "&rfc=" +
+                            "&tel_casa="+linea.getTel_casa() +
+                            "&tel_oficina=" +
+                            "&edad=" +
+                            "&email=telcel%40telcel.com" +
+                            "&usuario="+linea.getUsuario() +
+                            "&fecha="+fechaActual)
                     .asString();
+                codigo = response.getStatus();
+                responseBody = response.getBody();
+            System.out.println(codigo);
 
             if ( codigo == 200 && responseBody.contains(msjExitosoSava)){
                 System.out.println("TODO BIEN POST");
@@ -307,6 +318,7 @@ public class Main {
                 System.out.println("TRONO POST");
                 resultado = "TRONO";
             }
+            System.out.println("---------------------------------------------------");
          } catch (Exception ex) {
             System.out.println(ex.getMessage());
             System.out.println(ex);
@@ -325,7 +337,9 @@ public class Main {
             HttpResponse<String> response = Unirest.get("https://region2.telcel.com/default.asp")
                     .header("cache-control", "no-cache")
                     .asString();
-            System.out.println(responseBody);
+            responseBody = response.getBody();
+            //System.out.println(responseBody);
+            codigo = response.getStatus();
             if ( codigo == 200 && responseBody.contains(mensaje)){
                 System.out.println("TODO BIEN POST");
             } else {
@@ -366,7 +380,8 @@ class Linea {
     private String plataforma = "GSM";
     private String plan = "CEL";
     private String modalidad = "CPP";
-    private String distribuidor = "SUP";
+    private String distribuidor = "CET" +
+            "";
     private String fecha_activacion ;
     private String titulo = "";
     private String nombre ;
