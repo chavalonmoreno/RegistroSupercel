@@ -1,17 +1,14 @@
 import java.io.*;
 import java.net.*;
 import java.util.ArrayList;
-import java.util.Timer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.Random;
-
+import org.apache.poi.*;
 import com.mashape.unirest.http.HttpResponse;
 import com.mashape.unirest.http.Unirest;
-import com.squareup.okhttp.*;
-import com.squareup.okhttp.MediaType;
-import org.jdom2.Document;
-import org.jdom2.Element;
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.poi.ss.usermodel.*;
 import org.jdom2.input.SAXBuilder;
 import org.json.JSONException;
 
@@ -21,10 +18,12 @@ import org.json.JSONException;
  * @author alexisMoreno
  */
 public class Main {
-    private static final String usuario = "CEt00d1b0";
-    private static final String password = "centel01";
+    private static final String usuario = "SUP00D1B1";
+    private static final String password = "mercado4";
     private static final String tipo = "DISTRIBUIDOR";
-    private static final String fechaActual = "24%20de%20Octubre%20del%202017";
+    private static final String fechaActual = "A%2014%20de%20Noviembre%20del%202017";
+    private static final String lugar = "CULIACAN,%20SINALOA";
+    private static final String lugaryfecha = lugar+"%20"+fechaActual;
     private static final Integer tamanoNombres = 100;
     private static final Integer tamanoDirecciones = 719;
     private static final Integer tamanoCalles = 201;
@@ -36,29 +35,41 @@ public class Main {
     private static final String linkNumero = "https://region2.telcel.com/distribuidor/regdol/regdol_checa_v2.asp?w=2";
     private static final String linkRegistro = "https://region2.telcel.com/distribuidor/regdol/regdol_procesa_v2.asp";
     private static final String linkLogOUT = "https://region2.telcel.com/default.asp";
+    private static final String linkClaveRegistro = "https://region2.telcel.com/aplicaciones/activaciones/distribuidores/valida.asp?y=b";
+    private static final String linkResuelve = "https://region2.telcel.com/aplicaciones/activaciones/distribuidores/resuelve_gsm_nodol_tarifa.asp";
+    private static final String linkProcesa = "https://region2.telcel.com/aplicaciones/activaciones/distribuidores/procesa_gsm_nodol_tarifa.asp";
     private static final String [] meses = {"Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre"};
-    private static final String rutaCorrectos = "archivos/registradosbien.txt";
-    private static final String rutaIncorrectos = "archivos/tronados.txt";
+    private static final String rutaCorrectos = "archivos/chip3.txt";
+    private static final String rutaIncorrectos = "archivos/chipmal3.txt";
     static HttpURLConnection connection = null;
     static String responseBody = null;
     public static String targetUrl = "";
     static Random mr = new Random();
+    private static final String ladaGve = "687";
+    private static final String ladaCln = "667";
+    private static final String ladaNvto = "672";
+    private static final String ladaGml = "673";
+    static String iccidComun = "895202001732231";
+    static Integer inicio = 002;
+    static Integer fin = 100;
+
 
 
     public static void main(String[] args) throws IOException {
-        procesarArchivo();
+       //procesarArchivo();
         //getLogOut();
-
+       // generarInformacionChip();
+        crearExcel("archivos/chipGml1.xls","archivos/chip3.txt");
         System.exit(0);
     }
 
-    public static void procesarArchivo (){
-        Linea linea;
+    public static void generarInformacionChip () {
+        Chip chip;
         Usuario usuarioLog;
         int c = 0;
+        int t = 0;
         try {
-            ArrayList<String> lineas = getLinesOfFile("archivos/tronados.txt");
-            ArrayList<String> lineasRegistradas = getLinesOfFile("archivos/registradosbien.txt");
+            ArrayList<String> lineasRegistradas = getLinesOfFile("archivos/chip3.txt");
             ArrayList<String> nombres = getLinesOfFile("archivos/NOMBRES.txt");
             ArrayList<String> apellidos = getLinesOfFile("archivos/APELLIDOS.txt");
             ArrayList<String> direcciones = getLinesOfFile("archivos/COLONIASCPCLN.txt");
@@ -69,9 +80,70 @@ public class Main {
             usuarioLog.setTipo(tipo);
             postUsuario(usuarioLog);
             getLogIn();
-           /*for ( String renglon : lineas ){
-                String[] contenido = renglon.split("\\|");
-                String telefono = contenido[0];
+            postClaveRegistro(linkClaveRegistro);
+            while ( inicio <= fin ) {
+                if (!yaFueRegistradoChip(iccidComun+completarConCeros(inicio.toString()),lineasRegistradas)) {
+                    chip = new Chip();
+                    Direccion direccion = getDireccion(direcciones.get(mr.nextInt(tamanoDirecciones)));
+                    chip.setIccid(iccidComun+completarConCeros(inicio.toString()));
+                    chip.setCiudad_plaza("GUAMUCHIL");
+                    chip.setPlaza("16");
+                    String nombre = (nombres.get(mr.nextInt(tamanoNombres))).replaceAll(" ", "%20");
+                    String app = apellidos.get(mr.nextInt(tamanoNombres));
+                    String apm = apellidos.get(mr.nextInt(tamanoNombres));
+                    chip.setNombre(nombre + "%20" + app + "%20" + apm);
+                    chip.setCalle(calles.get(mr.nextInt(tamanoCalles)).replaceAll(" ", "%20"));
+                    chip.setColonia(direccion.getColonia().replaceAll(" ", "%20"));
+                    chip.setCp(direccion.getCp());
+                    chip.setTel(getNumeroTelefonicoAleatorio());
+                    chip.setCiudad("CULIACAN");
+                    chip.setEstado("SINALOA");
+                    chip.setLugaryfecha(lugaryfecha);
+                    String resultado = postResuelve(linkResuelve, chip);
+                    postProcesa(linkProcesa, chip);
+                    if (resultado.equals("BIEN")) {
+                        escribirLineaRegistradaChip(chip, rutaCorrectos);
+                        c++;
+                    } else {
+                        escribirLineaRegistradaChip(chip, rutaIncorrectos);
+                        t++;
+                    }
+
+                    System.out.println("Total bien: " + c);
+                    System.out.println("Total mal: " + t);
+                    Thread.sleep(5000);
+                }
+                inicio++;
+            }
+
+        } catch ( Exception e ) {
+            System.out.println("Error causado por : "+ e.getMessage());
+        } finally {
+            getLogOut();
+        }
+    }
+
+    public static void procesarArchivo (){
+        Linea linea;
+        Usuario usuarioLog;
+        int c = 0;
+        int t = 0;
+        try {
+            ArrayList<String> lineas = getLinesOfFile("archivos/LINEAS3.csv");
+            ArrayList<String> lineasRegistradas = getLinesOfFile("archivos/registrados3.txt");
+            ArrayList<String> nombres = getLinesOfFile("archivos/NOMBRES.txt");
+            ArrayList<String> apellidos = getLinesOfFile("archivos/APELLIDOS.txt");
+            ArrayList<String> direcciones = getLinesOfFile("archivos/COLONIASCPCLN.txt");
+            ArrayList<String> calles = getLinesOfFile("archivos/CALLES.txt");
+            usuarioLog = new Usuario();
+            usuarioLog.setUser(usuario);
+            usuarioLog.setPass(password);
+            usuarioLog.setTipo(tipo);
+            postUsuario(usuarioLog);
+            getLogIn();
+            for ( String renglon : lineas ){
+                String[] contenido = renglon.split(",");
+                String telefono = contenido[10];
                 if (!yaFueRegistrado(telefono,lineasRegistradas)) {
                     linea = new Linea();
                     linea.setTelefono(telefono);
@@ -93,14 +165,17 @@ public class Main {
                     String resultado = postSave(linea);
                     if ( resultado.equals("BIEN")) {
                         escribirLineaRegistrada(linea,rutaCorrectos);
+                        c ++;
                     } else {
                         escribirLineaRegistrada(linea,rutaIncorrectos);
+                        t++;
                     }
                     System.out.println(linea.toString());
 
-                    System.out.println("Total : "+c++);
+                    System.out.println("Total bien: "+c);
+                    System.out.println("Total mal: "+t);
                 }
-            }*/
+            }
            getLogOut();
         } catch (IOException ex) {
             Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
@@ -121,6 +196,27 @@ public class Main {
         return false;
     }
 
+    public static String completarConCeros ( String n ) {
+        String numeroCompleto = n;
+        int largo = n.length();
+        if ( largo == 1 ){
+            numeroCompleto = "00" + n;
+        } else if ( largo == 2 ) {
+            numeroCompleto = "0" + n;
+        }
+        return numeroCompleto;
+    }
+
+    public static boolean yaFueRegistradoChip ( String iccid , ArrayList <String> lineasRegistradas ) {
+        for ( String l : lineasRegistradas) {
+            String[] contenido = l.split("\\|");
+            if ( contenido[0] .equals(iccid)  ) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public static void escribirLineaRegistrada ( Linea linea, String ruta ) throws IOException{
         try {
             File file = new File(ruta);
@@ -132,6 +228,26 @@ public class Main {
                     linea.getAp_materno() + "|" + linea.getCalle().replaceAll("%20"," ")  + "|" +
                     linea.getNumero() + "|" + linea.getColonia().replaceAll("%20"," ")
                     + "|" + linea.getCp() + "|" + linea.getTel_casa();
+            FileWriter fw = new FileWriter(file.getAbsoluteFile(),true);
+            BufferedWriter bw = new BufferedWriter(fw);
+            bw.write(content);
+            bw.newLine();
+            bw.close();
+        } catch ( IOException ioe) {
+
+        }
+    }
+
+    public static void escribirLineaRegistradaChip ( Chip chip, String ruta ) throws IOException{
+        try {
+            File file = new File(ruta);
+            if (!file.exists()) {
+                file.mkdirs();
+            }
+            String content = chip.getIccid() + "|" + chip.getNombre().replaceAll("%20"," ") +
+                    "|" + chip.getTelefono() + "|" + chip.getCalle().replaceAll("%20"," ")  + "|" +
+                    chip.getColonia().replaceAll("%20"," ")
+                    + "|" + chip.getCp() + "|" + chip.getTel();
             FileWriter fw = new FileWriter(file.getAbsoluteFile(),true);
             BufferedWriter bw = new BufferedWriter(fw);
             bw.write(content);
@@ -211,13 +327,47 @@ public class Main {
     public static String getNumeroTelefonicoAleatorio () {
         String numero = "667";
         for ( int i = 0; i < 7; i ++ ) {
-            numero += mr.nextInt(9);
+            numero += mr.nextInt(8)+1;
         }
         return numero;
     }
 
     public static String getNumeroCasaAleatorio () {
         return mr.nextInt(3900) + 100 + "";
+    }
+
+    public static void crearExcel ( String nombreExcel, String rutaTxt ) throws IOException {
+        File archivo = new File(nombreExcel);
+
+        Workbook workbook = new HSSFWorkbook();
+
+        Sheet pagina = workbook.createSheet("Reporte de chips");
+
+        CellStyle style = workbook.createCellStyle();
+
+        ArrayList<String> lineasRegistradas = getLinesOfFile(rutaTxt);
+
+        int c = 0;
+
+        for ( String linea : lineasRegistradas ) {
+            String valores [] = linea.split("\\|");
+            String datos [] = { valores[0],valores[2] } ;
+            Row fila = pagina.createRow(c);
+
+            int n = 0;
+
+            for ( String v : datos) {
+                Cell celda = fila.createCell(n);
+                celda.setCellStyle(style);
+                celda.setCellValue(v);
+                n ++;
+            }
+
+            c++;
+        }
+        FileOutputStream salida = new FileOutputStream(archivo);
+        workbook.write(salida);
+        workbook.close();
     }
 
     public static void readJsonFromUrlPostLogIn(String tURL) throws Exception {
@@ -253,11 +403,7 @@ public class Main {
                     .asString();
             codigo = response.getStatus();
             responseBody = response.getBody();
-            Document document = (Document) builder.build(responseBody);
-            Element raiz = document.getRootElement();
-            System.out.println(raiz.getText());
             System.out.println(codigo);
-
             if ( codigo == 200 && responseBody.contains(mensaje)) {
                 System.out.println("TODO BIEN GET");
             } else {
@@ -286,7 +432,7 @@ public class Main {
                             "&plataforma=GSM" +
                             "&plan=CEL" +
                             "&modalidad=CPP" +
-                            "&distribuidor=SUP" +
+                            "&distribuidor=" + linea.getDistribuidor()+
                             "&fecha_activacion="+linea.getFecha_activacion() +
                             "&titulo=" +
                             "&nombre="+linea.getNombre() +
@@ -351,6 +497,127 @@ public class Main {
             throw new Exception(ex.getMessage());
         }
     }
+
+    public static void postClaveRegistro(String tURL) throws Exception {
+        Integer codigo = null;
+        try {
+            HttpResponse<String> response = Unirest.post(linkClaveRegistro)
+                    .header("content-type", "application/x-www-form-urlencoded")
+                    .header("cache-control", "no-cache")
+                    .body("pass=01004")
+                    .asString();
+            codigo = response.getStatus();
+            System.out.println(codigo);
+            if ( codigo == 200 ) {
+                System.out.println("TODO BIEN POST CLAVE REGISTRO");
+            } else {
+                System.out.println("TRONO POST CLAVE REGISTRO");
+            }
+        } catch (Exception ex) {
+            System.out.println(ex.getMessage());
+            System.out.println(ex);
+            throw new Exception(ex.getMessage());
+        }
+
+    }
+
+    public static String postResuelve(String tURL, Chip chip) throws IOException, JSONException, Exception {
+        URL url;
+        Integer codigo = null;
+        SAXBuilder builder = new SAXBuilder();
+        String resultado = "";
+        try {
+
+            HttpResponse<String> response = Unirest.post(tURL)
+                    .header("content-type", "application/x-www-form-urlencoded")
+                    .header("cache-control", "no-cache")
+                    .body("tipo="+chip.getTipo() +
+                            "&iccid="+chip.getIccid() +
+                            "&imei="+chip.getImei() +
+                            "&marca="+chip.getMarca() +
+                            "&modelo="+chip.getModelo() +
+                            "&plaza=" +chip.getPlaza()+
+                            "&nombre="+chip.getNombre() +
+                            "&rfc=" +
+                            "&calle="+chip.getCalle() +
+                            "&colonia="+chip.getColonia() +
+                            "&tel="+chip.getTel()+
+                            "&fax="+chip.getFax()+
+                            "&ciudad="+chip.getCiudad() +
+                            "&estado="+chip.getEstado()+
+                            "&cp="+chip.getCp() +
+                            "&lugar="+lugar +
+                            "&fecha="+fechaActual)
+                    .asString();
+            codigo = response.getStatus();
+            responseBody = response.getBody();
+            System.out.println(codigo);
+            //System.out.println(responseBody);
+            System.out.println("----------------------------");
+            boolean vieneNumero = responseBody.contains(ladaGml);
+            if ( codigo == 200 && vieneNumero){
+                System.out.println("TODO BIEN POST RESULVE");
+                Integer indice = responseBody.replaceAll(chip.getTel(),"").lastIndexOf(ladaGml);
+                String numeroRespuesta = responseBody.substring(indice,indice+10);
+                System.out.println("TELEFONO = "+numeroRespuesta + "ICCID = "+chip.getIccid());
+                chip.setTelefono(numeroRespuesta);
+                resultado = "BIEN";
+            } else {
+                System.out.println("TRONO POST RESUELVE");
+                resultado = "TRONO";
+            }
+            System.out.println("---------------------------------------------------");
+        } catch (Exception ex) {
+            resultado = "TRONO";
+            System.out.println(ex.getMessage());
+        }
+        return resultado;
+    }
+
+    public static void postProcesa(String tURL, Chip chip) throws IOException, JSONException, Exception {
+        URL url;
+        Integer codigo = null;
+        SAXBuilder builder = new SAXBuilder();
+        String resultado = "";
+        try {
+
+            HttpResponse<String> response = Unirest.post(tURL)
+                    .header("content-type", "application/x-www-form-urlencoded")
+                    .header("cache-control", "no-cache")
+                    .body("telefono="+chip.getTelefono()+
+                            "&tipo="+chip.getTipo() +
+                            "&iccid="+chip.getIccid() +
+                            "&imei="+chip.getImei() +
+                            "&marca="+chip.getMarca() +
+                            "&modelo="+chip.getModelo() +
+                            "&ciudad_plaza="+chip.getCiudad_plaza()+
+                            "&plaza=" +chip.getPlaza()+
+                            "&monto="+chip.getMonto()+
+                            "&tarifa="+chip.getTarifa()+
+                            "&nombre="+chip.getNombre() +
+                            "&rfc=" +
+                            "&calle="+chip.getCalle() +
+                            "&colonia="+chip.getColonia() +
+                            "&tel="+chip.getTel()+
+                            "&fax="+chip.getFax()+
+                            "&ciudad="+chip.getCiudad() +
+                            "&estado="+chip.getEstado()+
+                            "&cp="+chip.getCp() +
+                            "&lugaryfecha="+lugaryfecha )
+                    .asString();
+            codigo = response.getStatus();
+            responseBody = response.getBody();
+            System.out.println(codigo);
+            if ( codigo == 200 ){
+                System.out.println("TODO BIEN POST PROCESA");
+            } else {
+                System.out.println("TRONO POST PROCESA");
+            }
+            System.out.println("---------------------------------------------------");
+        } catch (Exception ex) {
+            System.out.println(ex.getMessage());
+        }
+    }
 }
 
 class Direccion {
@@ -380,7 +647,7 @@ class Linea {
     private String plataforma = "GSM";
     private String plan = "CEL";
     private String modalidad = "CPP";
-    private String distribuidor = "CET" +
+    private String distribuidor = "SUP" +
             "";
     private String fecha_activacion ;
     private String titulo = "";
@@ -640,4 +907,187 @@ class Usuario {
     }
 
 
+}
+
+class Chip {
+    private String telefono;
+    private String tipo = "CHIP";
+    private String iccid;
+    private String imei = "909368900000118";
+    private String marca = "";
+    private String modelo = "";
+    private String ciudad_plaza;
+    private String plaza;
+    private String monto = "$0.00";
+    private String tarifa = "0";
+    private String nombre;
+    private String rfc = "";
+    private String calle;
+    private String colonia;
+    private String tel;
+    private String fax = "";
+    private String ciudad;
+    private String estado;
+    private String cp;
+    private String lugaryfecha;
+
+    public String getTelefono() {
+        return telefono;
+    }
+
+    public void setTelefono(String telefono) {
+        this.telefono = telefono;
+    }
+
+    public String getTipo() {
+        return tipo;
+    }
+
+    public void setTipo(String tipo) {
+        this.tipo = tipo;
+    }
+
+    public String getIccid() {
+        return iccid;
+    }
+
+    public void setIccid(String iccid) {
+        this.iccid = iccid;
+    }
+
+    public String getImei() {
+        return imei;
+    }
+
+    public void setImei(String imei) {
+        this.imei = imei;
+    }
+
+    public String getMarca() {
+        return marca;
+    }
+
+    public void setMarca(String marca) {
+        this.marca = marca;
+    }
+
+    public String getModelo() {
+        return modelo;
+    }
+
+    public void setModelo(String modelo) {
+        this.modelo = modelo;
+    }
+
+    public String getCiudad_plaza() {
+        return ciudad_plaza;
+    }
+
+    public void setCiudad_plaza(String ciudad_plaza) {
+        this.ciudad_plaza = ciudad_plaza;
+    }
+
+    public String getPlaza() {
+        return plaza;
+    }
+
+    public void setPlaza(String plaza) {
+        this.plaza = plaza;
+    }
+
+    public String getMonto() {
+        return monto;
+    }
+
+    public void setMonto(String monto) {
+        this.monto = monto;
+    }
+
+    public String getTarifa() {
+        return tarifa;
+    }
+
+    public void setTarifa(String tarifa) {
+        this.tarifa = tarifa;
+    }
+
+    public String getNombre() {
+        return nombre;
+    }
+
+    public void setNombre(String nombre) {
+        this.nombre = nombre;
+    }
+
+    public String getRfc() {
+        return rfc;
+    }
+
+    public void setRfc(String rfc) {
+        this.rfc = rfc;
+    }
+
+    public String getCalle() {
+        return calle;
+    }
+
+    public void setCalle(String calle) {
+        this.calle = calle;
+    }
+
+    public String getColonia() {
+        return colonia;
+    }
+
+    public void setColonia(String colonia) {
+        this.colonia = colonia;
+    }
+
+    public String getTel() {
+        return tel;
+    }
+
+    public void setTel(String tel) {
+        this.tel = tel;
+    }
+
+    public String getFax() {
+        return fax;
+    }
+
+    public void setFax(String fax) {
+        this.fax = fax;
+    }
+
+    public String getCiudad() {
+        return ciudad;
+    }
+
+    public void setCiudad(String ciudad) {
+        this.ciudad = ciudad;
+    }
+
+    public String getEstado() {
+        return estado;
+    }
+
+    public void setEstado(String estado) {
+        this.estado = estado;
+    }
+
+    public String getCp() {
+        return cp;
+    }
+
+    public void setCp(String cp) {
+        this.cp = cp;
+    }
+
+    public String getLugaryfecha() {
+        return lugaryfecha;
+    }
+
+    public void setLugaryfecha(String lugaryfecha) {
+        this.lugaryfecha = lugaryfecha;
+    }
 }
