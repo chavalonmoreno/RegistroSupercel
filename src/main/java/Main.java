@@ -1,6 +1,7 @@
 import java.io.*;
 import java.net.*;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.Random;
@@ -18,10 +19,14 @@ import org.json.JSONException;
  * @author alexisMoreno
  */
 public class Main {
-    private static final String usuario = "SUP00D1B1";
-    private static final String password = "mercado4";
+    private static final String usuarioCen = "CET00D1B0";
+    private static final String passwordCen = "centel02";
+    //private static final String usuario = "Sup34d1b0";
+    private static final String usuario = "Sup00d1b2";
+    //private static final String password = "Supercel";
+    private static final String password = "Dicel666";
     private static final String tipo = "DISTRIBUIDOR";
-    private static final String fechaActual = "A%2014%20de%20Noviembre%20del%202017";
+    private static final String fechaActual = "A%2018%20de%20Febrero%20del%202018";
     private static final String lugar = "CULIACAN,%20SINALOA";
     private static final String lugaryfecha = lugar+"%20"+fechaActual;
     private static final Integer tamanoNombres = 100;
@@ -38,9 +43,11 @@ public class Main {
     private static final String linkClaveRegistro = "https://region2.telcel.com/aplicaciones/activaciones/distribuidores/valida.asp?y=b";
     private static final String linkResuelve = "https://region2.telcel.com/aplicaciones/activaciones/distribuidores/resuelve_gsm_nodol_tarifa.asp";
     private static final String linkProcesa = "https://region2.telcel.com/aplicaciones/activaciones/distribuidores/procesa_gsm_nodol_tarifa.asp";
-    private static final String [] meses = {"Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre"};
-    private static final String rutaCorrectos = "archivos/chip3.txt";
-    private static final String rutaIncorrectos = "archivos/chipmal3.txt";
+    private static final String [] meses = {"Noviembre","Diciembre"};
+    private static final String rutaCorrectosDOL = "archivos/registradosCET0217.txt";
+    private static final String rutaIncorrectosDOL = "archivos/tronadosCET0217.txt";
+    private static final String rutaCorrectosCHIP = "archivos/chipcln012503.txt";
+    private static final String rutaIncorrectosCHIP = "archivos/chipcln012503mal.txt";
     static HttpURLConnection connection = null;
     static String responseBody = null;
     public static String targetUrl = "";
@@ -49,17 +56,19 @@ public class Main {
     private static final String ladaCln = "667";
     private static final String ladaNvto = "672";
     private static final String ladaGml = "673";
-    static String iccidComun = "895202001732231";
-    static Integer inicio = 002;
-    static Integer fin = 100;
+    static String iccidComun = "8952020017620";
+    static Integer inicio = 5001;
+    static Integer fin = 6000;
 
 
 
-    public static void main(String[] args) throws IOException {
-       //procesarArchivo();
+    public static void main(String[] args) throws Exception {
+        //pruebacreararchivo();
+        procesarArchivo();
         //getLogOut();
-       // generarInformacionChip();
-        crearExcel("archivos/chipGml1.xls","archivos/chip3.txt");
+        //generarInformacionChip();
+        //ordenarLineasRegistradas(rutaCorrectosCHIP);
+        //crearExcel(rutaCorrectosCHIP.replaceAll(".txt",".xls"),rutaCorrectosCHIP.replaceAll(".txt","Ordenado.txt"));
         System.exit(0);
     }
 
@@ -69,7 +78,7 @@ public class Main {
         int c = 0;
         int t = 0;
         try {
-            ArrayList<String> lineasRegistradas = getLinesOfFile("archivos/chip3.txt");
+            ArrayList<String> lineasRegistradas = getLinesOfFile(rutaCorrectosCHIP);
             ArrayList<String> nombres = getLinesOfFile("archivos/NOMBRES.txt");
             ArrayList<String> apellidos = getLinesOfFile("archivos/APELLIDOS.txt");
             ArrayList<String> direcciones = getLinesOfFile("archivos/COLONIASCPCLN.txt");
@@ -82,12 +91,12 @@ public class Main {
             getLogIn();
             postClaveRegistro(linkClaveRegistro);
             while ( inicio <= fin ) {
-                if (!yaFueRegistradoChip(iccidComun+completarConCeros(inicio.toString()),lineasRegistradas)) {
+                if (!yaFueRegistradoChip(iccidComun+completarConCeros(inicio),lineasRegistradas)) {
                     chip = new Chip();
                     Direccion direccion = getDireccion(direcciones.get(mr.nextInt(tamanoDirecciones)));
-                    chip.setIccid(iccidComun+completarConCeros(inicio.toString()));
-                    chip.setCiudad_plaza("GUAMUCHIL");
-                    chip.setPlaza("16");
+                    chip.setIccid(iccidComun+completarConCeros(inicio));
+                    chip.setCiudad_plaza("CULIACAN");
+                    chip.setPlaza("18");
                     String nombre = (nombres.get(mr.nextInt(tamanoNombres))).replaceAll(" ", "%20");
                     String app = apellidos.get(mr.nextInt(tamanoNombres));
                     String apm = apellidos.get(mr.nextInt(tamanoNombres));
@@ -102,16 +111,16 @@ public class Main {
                     String resultado = postResuelve(linkResuelve, chip);
                     postProcesa(linkProcesa, chip);
                     if (resultado.equals("BIEN")) {
-                        escribirLineaRegistradaChip(chip, rutaCorrectos);
+                        escribirLineaRegistradaChip(chip, rutaCorrectosCHIP);
                         c++;
                     } else {
-                        escribirLineaRegistradaChip(chip, rutaIncorrectos);
+                        escribirLineaRegistradaChip(chip, rutaIncorrectosCHIP);
                         t++;
                     }
 
                     System.out.println("Total bien: " + c);
                     System.out.println("Total mal: " + t);
-                    Thread.sleep(5000);
+                    Thread.sleep(3000);
                 }
                 inicio++;
             }
@@ -129,23 +138,23 @@ public class Main {
         int c = 0;
         int t = 0;
         try {
-            ArrayList<String> lineas = getLinesOfFile("archivos/LINEAS3.csv");
-            ArrayList<String> lineasRegistradas = getLinesOfFile("archivos/registrados3.txt");
+            ArrayList<String> lineas = getLinesOfFile("archivos/CETLINEAS0217.csv");
+            ArrayList<String> lineasRegistradas = getLinesOfFile(rutaCorrectosDOL);
             ArrayList<String> nombres = getLinesOfFile("archivos/NOMBRES.txt");
             ArrayList<String> apellidos = getLinesOfFile("archivos/APELLIDOS.txt");
             ArrayList<String> direcciones = getLinesOfFile("archivos/COLONIASCPCLN.txt");
             ArrayList<String> calles = getLinesOfFile("archivos/CALLES.txt");
+            ArrayList<String> lineasFiltradas = getLineasFiltradas(lineas);
             usuarioLog = new Usuario();
-            usuarioLog.setUser(usuario);
-            usuarioLog.setPass(password);
+            usuarioLog.setUser(usuarioCen);
+            usuarioLog.setPass(passwordCen);
             usuarioLog.setTipo(tipo);
             postUsuario(usuarioLog);
             getLogIn();
-            for ( String renglon : lineas ){
-                String[] contenido = renglon.split(",");
-                String telefono = contenido[10];
+            for ( String telefono : lineasFiltradas ){
                 if (!yaFueRegistrado(telefono,lineasRegistradas)) {
                     linea = new Linea();
+                    linea.setDistribuidor("CET");
                     linea.setTelefono(telefono);
                     Direccion direccion = getDireccion(direcciones.get(mr.nextInt(tamanoDirecciones)));
                     linea.setNombre((nombres.get(mr.nextInt(tamanoNombres))).replaceAll(" ", "%20"));
@@ -164,10 +173,10 @@ public class Main {
                     Thread.sleep(2000);
                     String resultado = postSave(linea);
                     if ( resultado.equals("BIEN")) {
-                        escribirLineaRegistrada(linea,rutaCorrectos);
+                        escribirLineaRegistrada(linea,rutaCorrectosDOL);
                         c ++;
                     } else {
-                        escribirLineaRegistrada(linea,rutaIncorrectos);
+                        escribirLineaRegistrada(linea,rutaIncorrectosDOL);
                         t++;
                     }
                     System.out.println(linea.toString());
@@ -176,7 +185,7 @@ public class Main {
                     System.out.println("Total mal: "+t);
                 }
             }
-           getLogOut();
+
         } catch (IOException ex) {
             Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
         }/* catch (InterruptedException e) {
@@ -184,25 +193,85 @@ public class Main {
         } */catch (Exception e) {
             e.printStackTrace();
         }
+        finally {
+            getLogOut();
+        }
     }
+
+    public static void pruebacreararchivo ( ) throws Exception {
+
+        Linea linea;
+        Usuario usuarioLog;
+        try {
+            ArrayList<String> lineas = getLinesOfFile("archivos/CETLINEAS0115.csv");
+            ArrayList<String> lineasRegistradas = getLinesOfFile("archivos/registradosCET0115.txt");
+            ArrayList<String> nombres = getLinesOfFile("archivos/NOMBRES.txt");
+            ArrayList<String> apellidos = getLinesOfFile("archivos/APELLIDOS.txt");
+            ArrayList<String> direcciones = getLinesOfFile("archivos/COLONIASCPCLN.txt");
+            ArrayList<String> calles = getLinesOfFile("archivos/CALLES.txt");
+            ArrayList<String> lineasFiltradas = getLineasFiltradas(lineas);
+            for ( String telefono : lineasFiltradas ){
+                if (!yaFueRegistrado(telefono,lineasRegistradas)) {
+                    linea = new Linea();
+                    linea.setTelefono(telefono);
+                    Direccion direccion = getDireccion(direcciones.get(mr.nextInt(tamanoDirecciones)));
+                    linea.setNombre((nombres.get(mr.nextInt(tamanoNombres))).replaceAll(" ", "%20"));
+                    linea.setAp_paterno(apellidos.get(mr.nextInt(tamanoNombres)));
+                    linea.setAp_materno(apellidos.get(mr.nextInt(tamanoNombres)));
+                    linea.setColonia(direccion.getColonia().replaceAll(" ", "%20"));
+                    linea.setCp(direccion.getCp());
+                    linea.setNumero(getNumeroCasaAleatorio());
+                    linea.setTel_casa(getNumeroTelefonicoAleatorio());
+                    linea.setCalle(calles.get(mr.nextInt(tamanoCalles)).replaceAll(" ", "%20"));
+                    linea.setEstado("SIN");
+                    linea.setCiudad("CULIACAN");
+                    linea.setFecha(fechaActual);
+                    linea.setFecha_activacion(getFechaActivacionAleatoria());
+                    linea.setUsuario(usuario);
+                    Thread.sleep(2000);
+                   // String resultado = postSave(linea);
+                    escribirLineaRegistrada(linea,rutaCorrectosDOL);
+                }
+            }
+        } catch (Exception e) {
+            Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, e);
+        }
+    }
+
+   public static ArrayList<String> getLineasFiltradas (ArrayList<String> lineasOriginales ) {
+       ArrayList<String> lineasFiltradas = new ArrayList<>();
+       for ( String linea : lineasOriginales){
+           String [] valores = linea.split(",");
+           if (valores[21].contains("DOL")) {
+               lineasFiltradas.add(valores[9]);
+           }
+
+       }
+       return lineasFiltradas;
+   }
+
 
     public static boolean yaFueRegistrado ( String numero , ArrayList <String> lineasRegistradas ) {
         for ( String l : lineasRegistradas) {
             String[] contenido = l.split("\\|");
-            if ( contenido[0] .equals(numero)  ) {
+            if ( contenido[0].trim() .equals(numero.trim())  ) {
                 return true;
             }
         }
         return false;
     }
 
-    public static String completarConCeros ( String n ) {
-        String numeroCompleto = n;
-        int largo = n.length();
+    public static String completarConCeros ( Integer n ) {
+        String numeroCompleto = n.toString();
+        int largo = numeroCompleto.length();
         if ( largo == 1 ){
-            numeroCompleto = "00" + n;
+            numeroCompleto = "0000" + numeroCompleto;
         } else if ( largo == 2 ) {
-            numeroCompleto = "0" + n;
+            numeroCompleto = "000" + numeroCompleto;
+        } else if ( largo == 3 ) {
+            numeroCompleto = "00" + numeroCompleto;
+        } else if ( largo == 4 ) {
+            numeroCompleto = "0" + numeroCompleto;
         }
         return numeroCompleto;
     }
@@ -242,12 +311,12 @@ public class Main {
         try {
             File file = new File(ruta);
             if (!file.exists()) {
-                file.mkdirs();
+                file.createNewFile();
             }
             String content = chip.getIccid() + "|" + chip.getNombre().replaceAll("%20"," ") +
                     "|" + chip.getTelefono() + "|" + chip.getCalle().replaceAll("%20"," ")  + "|" +
                     chip.getColonia().replaceAll("%20"," ")
-                    + "|" + chip.getCp() + "|" + chip.getTel();
+                    + "|" + chip.getCp() + "|" + chip.getTel() ;
             FileWriter fw = new FileWriter(file.getAbsoluteFile(),true);
             BufferedWriter bw = new BufferedWriter(fw);
             bw.write(content);
@@ -256,6 +325,38 @@ public class Main {
         } catch ( IOException ioe) {
 
         }
+    }
+
+    public static void ordenarLineasRegistradas ( String ruta ) throws IOException {
+        ArrayList<String> lineasRegistradas = getLinesOfFile(ruta);
+        ArrayList<Chip> lineas = new ArrayList<>();
+        File archivoOrigen = new File(ruta);
+        String nombre = archivoOrigen.getName();
+        String path = archivoOrigen.getPath();
+        String nombreNuevoArchivo = path.replace(".txt","Ordenado.txt");
+        Chip chip;
+        try {
+            for ( String linea : lineasRegistradas ){
+                String [] contenido = linea.split("\\|");
+                chip = new Chip();
+                chip.setIccid(contenido[0]);
+                chip.setNombre(contenido[1]);
+                chip.setTelefono(contenido[2]);
+                chip.setCalle(contenido[3]);
+                chip.setColonia(contenido[4]);
+                chip.setCp(contenido[5]);
+                chip.setTel(contenido[6]);
+                lineas.add(chip);
+            }
+            Collections.sort(lineas);
+            for ( Chip c : lineas) {
+                escribirLineaRegistradaChip(c,nombreNuevoArchivo);
+            }
+        } catch ( Exception ioe ){
+            System.out.println("Error al ordenar el archivo causado por : " + ioe.getMessage());
+        }
+
+
     }
 
     public static void getLogIn () {
@@ -290,6 +391,10 @@ public class Main {
     public static ArrayList<String> getLinesOfFile ( String archivo ) throws IOException{
         ArrayList<String> lineas = new ArrayList<>();
         try {
+            File file = new File(archivo);
+            if (!file.exists()) {
+                file.createNewFile();
+            }
             String cadena = "";
             BufferedReader bf = new BufferedReader(new FileReader( archivo ));
             while ( (cadena = bf.readLine()) != null ) {
@@ -304,7 +409,7 @@ public class Main {
     public static String getFechaActivacionAleatoria () {
         int diaNumero = mr.nextInt(27) + 1 ;
         String dia = "";
-        String mes = meses[mr.nextInt(5)];
+        String mes = meses[mr.nextInt(meses.length)];
         if ( diaNumero < 10) {
             dia = "0" + diaNumero;
         } else {
@@ -379,6 +484,8 @@ public class Main {
                     .body("tipo="+tipo+"&user="+usuario+"&pass="+password)
                     .asString();
             codigo = response.getStatus();
+            responseBody = response.getBody();
+            System.out.println(responseBody);
             System.out.println(codigo);
             if ( codigo == 200 ) {
                 System.out.println("TODO BIEN GET");
@@ -403,6 +510,7 @@ public class Main {
                     .asString();
             codigo = response.getStatus();
             responseBody = response.getBody();
+
             System.out.println(codigo);
             if ( codigo == 200 && responseBody.contains(mensaje)) {
                 System.out.println("TODO BIEN GET");
@@ -552,12 +660,12 @@ public class Main {
             codigo = response.getStatus();
             responseBody = response.getBody();
             System.out.println(codigo);
-            //System.out.println(responseBody);
+           // System.out.println(responseBody);
             System.out.println("----------------------------");
-            boolean vieneNumero = responseBody.contains(ladaGml);
+            boolean vieneNumero = responseBody.contains(ladaCln);
             if ( codigo == 200 && vieneNumero){
                 System.out.println("TODO BIEN POST RESULVE");
-                Integer indice = responseBody.replaceAll(chip.getTel(),"").lastIndexOf(ladaGml);
+                Integer indice = responseBody.replaceAll(chip.getTel(),"").replaceAll(chip.getIccid(),"").lastIndexOf(ladaCln);
                 String numeroRespuesta = responseBody.substring(indice,indice+10);
                 System.out.println("TELEFONO = "+numeroRespuesta + "ICCID = "+chip.getIccid());
                 chip.setTelefono(numeroRespuesta);
@@ -607,6 +715,7 @@ public class Main {
                     .asString();
             codigo = response.getStatus();
             responseBody = response.getBody();
+            //System.out.println(responseBody);
             System.out.println(codigo);
             if ( codigo == 200 ){
                 System.out.println("TODO BIEN POST PROCESA");
@@ -647,8 +756,7 @@ class Linea {
     private String plataforma = "GSM";
     private String plan = "CEL";
     private String modalidad = "CPP";
-    private String distribuidor = "SUP" +
-            "";
+    private String distribuidor = "";
     private String fecha_activacion ;
     private String titulo = "";
     private String nombre ;
@@ -909,7 +1017,7 @@ class Usuario {
 
 }
 
-class Chip {
+class Chip implements Comparable<Chip>{
     private String telefono;
     private String tipo = "CHIP";
     private String iccid;
@@ -1089,5 +1197,10 @@ class Chip {
 
     public void setLugaryfecha(String lugaryfecha) {
         this.lugaryfecha = lugaryfecha;
+    }
+
+    @Override
+    public int compareTo(Chip o) {
+        return Long.valueOf(this.getIccid()).compareTo(Long.valueOf(o.getIccid()));
     }
 }
