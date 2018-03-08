@@ -24,9 +24,9 @@ public class Main {
     //private static final String usuario = "Sup34d1b0";
     private static final String usuario = "Sup00d1b2";
     //private static final String password = "Supercel";
-    private static final String password = "Dicel666";
+    private static final String password = "DICEL888";
     private static final String tipo = "DISTRIBUIDOR";
-    private static final String fechaActual = "A%2018%20de%20Febrero%20del%202018";
+    private static final String fechaActual = "A%2027%20de%20Febrero%20del%202018";
     private static final String lugar = "CULIACAN,%20SINALOA";
     private static final String lugaryfecha = lugar+"%20"+fechaActual;
     private static final Integer tamanoNombres = 100;
@@ -43,9 +43,9 @@ public class Main {
     private static final String linkClaveRegistro = "https://region2.telcel.com/aplicaciones/activaciones/distribuidores/valida.asp?y=b";
     private static final String linkResuelve = "https://region2.telcel.com/aplicaciones/activaciones/distribuidores/resuelve_gsm_nodol_tarifa.asp";
     private static final String linkProcesa = "https://region2.telcel.com/aplicaciones/activaciones/distribuidores/procesa_gsm_nodol_tarifa.asp";
-    private static final String [] meses = {"Noviembre","Diciembre"};
-    private static final String rutaCorrectosDOL = "archivos/registradosCET0217.txt";
-    private static final String rutaIncorrectosDOL = "archivos/tronadosCET0217.txt";
+    private static final String [] meses = {"Diciembre"};
+    private static final String rutaCorrectosDOL = "archivos/registradosSUP0227.txt";
+    private static final String rutaIncorrectosDOL = "archivos/tronadosSUP0227.txt";
     private static final String rutaCorrectosCHIP = "archivos/chipcln012503.txt";
     private static final String rutaIncorrectosCHIP = "archivos/chipcln012503mal.txt";
     static HttpURLConnection connection = null;
@@ -138,7 +138,7 @@ public class Main {
         int c = 0;
         int t = 0;
         try {
-            ArrayList<String> lineas = getLinesOfFile("archivos/CETLINEAS0217.csv");
+            ArrayList<String> lineas = getLinesOfFile("archivos/SUPLINEAS0227.csv");
             ArrayList<String> lineasRegistradas = getLinesOfFile(rutaCorrectosDOL);
             ArrayList<String> nombres = getLinesOfFile("archivos/NOMBRES.txt");
             ArrayList<String> apellidos = getLinesOfFile("archivos/APELLIDOS.txt");
@@ -146,15 +146,15 @@ public class Main {
             ArrayList<String> calles = getLinesOfFile("archivos/CALLES.txt");
             ArrayList<String> lineasFiltradas = getLineasFiltradas(lineas);
             usuarioLog = new Usuario();
-            usuarioLog.setUser(usuarioCen);
-            usuarioLog.setPass(passwordCen);
+            usuarioLog.setUser(usuario);
+            usuarioLog.setPass(password);
             usuarioLog.setTipo(tipo);
             postUsuario(usuarioLog);
             getLogIn();
             for ( String telefono : lineasFiltradas ){
                 if (!yaFueRegistrado(telefono,lineasRegistradas)) {
                     linea = new Linea();
-                    linea.setDistribuidor("CET");
+                    linea.setDistribuidor("SUP");
                     linea.setTelefono(telefono);
                     Direccion direccion = getDireccion(direcciones.get(mr.nextInt(tamanoDirecciones)));
                     linea.setNombre((nombres.get(mr.nextInt(tamanoNombres))).replaceAll(" ", "%20"));
@@ -242,8 +242,8 @@ public class Main {
        ArrayList<String> lineasFiltradas = new ArrayList<>();
        for ( String linea : lineasOriginales){
            String [] valores = linea.split(",");
-           if (valores[21].contains("DOL")) {
-               lineasFiltradas.add(valores[9]);
+           if (valores[14].contains("DOL")) {
+               lineasFiltradas.add(valores[2]);
            }
 
        }
@@ -415,7 +415,7 @@ public class Main {
         } else {
             dia += diaNumero;
         }
-        return (dia + " de " + mes + " del 2017").replaceAll(" ","%20");
+        return (dia + " de " + mes + " del 2018").replaceAll(" ","%20");
     }
 
     public static Direccion getDireccion (String linea ){
