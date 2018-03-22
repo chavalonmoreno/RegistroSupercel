@@ -5,13 +5,19 @@ import java.util.Collections;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.Random;
+
+import com.mashape.unirest.http.Headers;
 import org.apache.poi.*;
 import com.mashape.unirest.http.HttpResponse;
 import com.mashape.unirest.http.Unirest;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.*;
+import org.jdom2.Document;
 import org.jdom2.input.SAXBuilder;
 import org.json.JSONException;
+import org.jsoup.Jsoup;
+
+import javax.sound.sampled.Line;
 
 
 /**
@@ -20,19 +26,18 @@ import org.json.JSONException;
  */
 public class Main {
     private static final String usuarioCen = "CET00D1B0";
-    private static final String passwordCen = "centel02";
+    private static final String passwordCen = "centel04";
     //private static final String usuario = "Sup34d1b0";
     private static final String usuario = "Sup00d1b2";
     //private static final String password = "Supercel";
     private static final String password = "DICEL888";
     private static final String tipo = "DISTRIBUIDOR";
-    private static final String fechaActual = "A%2027%20de%20Febrero%20del%202018";
+    private static final String fechaActual = "A%2022%20de%20Marzo%20del%202018";
     private static final String lugar = "CULIACAN,%20SINALOA";
     private static final String lugaryfecha = lugar+"%20"+fechaActual;
     private static final Integer tamanoNombres = 100;
     private static final Integer tamanoDirecciones = 719;
     private static final Integer tamanoCalles = 201;
-    public static  String cookie = "";
     private static final String mensaje = "Telcel Regi&oacute;n 2";
     private static final String msjExitosoSava = "ha sido enviado con exito";
     private static final String linkUsuario = "https://region2.telcel.com/validamefv.asp";
@@ -44,21 +49,19 @@ public class Main {
     private static final String linkResuelve = "https://region2.telcel.com/aplicaciones/activaciones/distribuidores/resuelve_gsm_nodol_tarifa.asp";
     private static final String linkProcesa = "https://region2.telcel.com/aplicaciones/activaciones/distribuidores/procesa_gsm_nodol_tarifa.asp";
     private static final String [] meses = {"Diciembre"};
-    private static final String rutaCorrectosDOL = "archivos/registradosSUP0227.txt";
-    private static final String rutaIncorrectosDOL = "archivos/tronadosSUP0227.txt";
-    private static final String rutaCorrectosCHIP = "archivos/chipcln012503.txt";
-    private static final String rutaIncorrectosCHIP = "archivos/chipcln012503mal.txt";
-    static HttpURLConnection connection = null;
+    private static final String rutaCorrectosDOL = "archivos/registradosCET0322.txt";
+    private static final String rutaIncorrectosDOL = "archivos/tronadosCET0322.txt";
+    private static final String rutaCorrectosCHIP = "archivos/chipgve031401.txt";
+    private static final String rutaIncorrectosCHIP = "archivos/chipgve031401mal.txt";
     static String responseBody = null;
-    public static String targetUrl = "";
     static Random mr = new Random();
     private static final String ladaGve = "687";
     private static final String ladaCln = "667";
     private static final String ladaNvto = "672";
     private static final String ladaGml = "673";
-    static String iccidComun = "8952020017620";
-    static Integer inicio = 5001;
-    static Integer fin = 6000;
+    static String iccidComun = "8952020018122";
+    static Integer inicio = 30001;
+    static Integer fin = 30500;
 
 
 
@@ -66,7 +69,7 @@ public class Main {
         //pruebacreararchivo();
         procesarArchivo();
         //getLogOut();
-        //generarInformacionChip();
+        ///generarInformacionChip();
         //ordenarLineasRegistradas(rutaCorrectosCHIP);
         //crearExcel(rutaCorrectosCHIP.replaceAll(".txt",".xls"),rutaCorrectosCHIP.replaceAll(".txt","Ordenado.txt"));
         System.exit(0);
@@ -95,8 +98,8 @@ public class Main {
                     chip = new Chip();
                     Direccion direccion = getDireccion(direcciones.get(mr.nextInt(tamanoDirecciones)));
                     chip.setIccid(iccidComun+completarConCeros(inicio));
-                    chip.setCiudad_plaza("CULIACAN");
-                    chip.setPlaza("18");
+                    chip.setCiudad_plaza("GUASAVE");
+                    chip.setPlaza("15");
                     String nombre = (nombres.get(mr.nextInt(tamanoNombres))).replaceAll(" ", "%20");
                     String app = apellidos.get(mr.nextInt(tamanoNombres));
                     String apm = apellidos.get(mr.nextInt(tamanoNombres));
@@ -138,7 +141,7 @@ public class Main {
         int c = 0;
         int t = 0;
         try {
-            ArrayList<String> lineas = getLinesOfFile("archivos/SUPLINEAS0227.csv");
+            ArrayList<String> lineas = getLinesOfFile("archivos/CETLINEAS2203.csv");
             ArrayList<String> lineasRegistradas = getLinesOfFile(rutaCorrectosDOL);
             ArrayList<String> nombres = getLinesOfFile("archivos/NOMBRES.txt");
             ArrayList<String> apellidos = getLinesOfFile("archivos/APELLIDOS.txt");
@@ -154,8 +157,9 @@ public class Main {
             for ( String telefono : lineasFiltradas ){
                 if (!yaFueRegistrado(telefono,lineasRegistradas)) {
                     linea = new Linea();
-                    linea.setDistribuidor("SUP");
+                    linea.setDistribuidor("CET");
                     linea.setTelefono(telefono);
+                    postNumeroDOL(linea);
                     Direccion direccion = getDireccion(direcciones.get(mr.nextInt(tamanoDirecciones)));
                     linea.setNombre((nombres.get(mr.nextInt(tamanoNombres))).replaceAll(" ", "%20"));
                     linea.setAp_paterno(apellidos.get(mr.nextInt(tamanoNombres)));
@@ -171,14 +175,14 @@ public class Main {
                     linea.setFecha_activacion(getFechaActivacionAleatoria());
                     linea.setUsuario(usuario);
                     Thread.sleep(2000);
-                    String resultado = postSave(linea);
-                    if ( resultado.equals("BIEN")) {
+                    //String resultado = postSave(linea);
+                    /*if ( resultado.equals("BIEN")) {
                         escribirLineaRegistrada(linea,rutaCorrectosDOL);
                         c ++;
                     } else {
                         escribirLineaRegistrada(linea,rutaIncorrectosDOL);
                         t++;
-                    }
+                    }*/
                     System.out.println(linea.toString());
 
                     System.out.println("Total bien: "+c);
@@ -242,8 +246,8 @@ public class Main {
        ArrayList<String> lineasFiltradas = new ArrayList<>();
        for ( String linea : lineasOriginales){
            String [] valores = linea.split(",");
-           if (valores[14].contains("DOL")) {
-               lineasFiltradas.add(valores[2]);
+           if (valores[18].contains("DOL")) {
+               lineasFiltradas.add(valores[10]);
            }
 
        }
@@ -525,6 +529,33 @@ public class Main {
 
     }
 
+    public static void postNumeroDOL(Linea linea) throws Exception {
+        int codigo ;
+        try {
+            HttpResponse<String> response = Unirest.post(linkNumero)
+                    .header("content-type", "application/x-www-form-urlencoded")
+                    .header("cache-control", "no-cache")
+                    .body("telefeno="+linea.getTelefono())
+                    .asString();
+            codigo = response.getStatus();
+            responseBody = response.getBody();
+            org.jsoup.nodes.Document doc = Jsoup.parse(responseBody);
+            System.out.println(doc.body().toString());
+            System.out.println(responseBody);
+            System.out.println(codigo);
+            if ( codigo == 200 ) {
+                System.out.println("TODO BIEN GET");
+            } else {
+                System.out.println("TRONO GET");
+            }
+        } catch (Exception ex) {
+            System.out.println(ex.getMessage());
+            System.out.println(ex);
+            throw new Exception(ex.getMessage());
+        }
+
+    }
+
     public static String readJsonFromUrlPost(String tURL, Linea linea) throws IOException, JSONException, Exception {
         URL url;
         Integer codigo = null;
@@ -662,10 +693,11 @@ public class Main {
             System.out.println(codigo);
            // System.out.println(responseBody);
             System.out.println("----------------------------");
-            boolean vieneNumero = responseBody.contains(ladaCln);
+            boolean vieneNumero = responseBody.contains(ladaGve);
             if ( codigo == 200 && vieneNumero){
                 System.out.println("TODO BIEN POST RESULVE");
-                Integer indice = responseBody.replaceAll(chip.getTel(),"").replaceAll(chip.getIccid(),"").lastIndexOf(ladaCln);
+                Integer indice = responseBody.replaceAll(chip.getTel(),"").
+                        replaceAll(chip.getIccid(),"").lastIndexOf(ladaGve);
                 String numeroRespuesta = responseBody.substring(indice,indice+10);
                 System.out.println("TELEFONO = "+numeroRespuesta + "ICCID = "+chip.getIccid());
                 chip.setTelefono(numeroRespuesta);
