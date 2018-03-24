@@ -16,6 +16,8 @@ import org.jdom2.Document;
 import org.jdom2.input.SAXBuilder;
 import org.json.JSONException;
 import org.jsoup.Jsoup;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 
 import javax.sound.sampled.Line;
 
@@ -540,8 +542,12 @@ public class Main {
             codigo = response.getStatus();
             responseBody = response.getBody();
             org.jsoup.nodes.Document doc = Jsoup.parse(responseBody);
-            System.out.println(doc.body().toString());
-            System.out.println(responseBody);
+            Element body = doc.body();
+            Element modalidad = body.selectFirst("input[name=modalidad]");
+            Element fechaActivacion = body.selectFirst("input[name=fecha_activacion]");
+            System.out.println("Modaliad = " + modalidad.toString());
+            System.out.println("Fecha Activacion = " + fechaActivacion.toString());
+            //System.out.println(responseBody);
             System.out.println(codigo);
             if ( codigo == 200 ) {
                 System.out.println("TODO BIEN GET");
